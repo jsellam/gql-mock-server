@@ -1,0 +1,41 @@
+remote:
+  - https://api.dev.ked.southpigalle.io/graphql
+types:
+  - name: Image
+    description: "Remote picture"
+    fields:
+      - name: id
+        type: ID!
+        faker: random.uuid
+      - name: "hd"
+        type: String!
+        faker: image.url
+      - name: "sd"
+        type: String!
+        faker: image.url
+  - name: Book
+    description: "This is a book item"
+    fields:
+      - name: id
+        type: ID!
+        faker: random.uuid
+        description: "Unique identifier for the book."
+      - name: title
+        type: String!
+        faker: lorem.sentence
+        description: "The title of the book"
+queries:
+  - name: book
+    type: Book
+    description: "Get book by id"
+    arguments:
+      - name: id
+        type: ID!
+  - name: books
+    type: [Book!]
+    description: "Get Book list"
+    arguments:
+      - name: skip
+        type: Int
+      - name: limit
+        type: Int
