@@ -1,16 +1,12 @@
 {
   "compilerOptions": {
-    "target": "ES2020", // Utiliser un code compatible avec ES2020 et supérieur
-    "module": "ESNext", // Utiliser le module ES6+ pour les imports
-    "moduleResolution": "Node", // Résolution des modules comme dans Node.js
-    "esModuleInterop": true, // Permet l'importation des modules CommonJS avec `import`
-    "skipLibCheck": true, // Ignorer la vérification des types des bibliothèques
-    "outDir": "./dist", // Dossier de sortie du code compilé
-    "rootDir": "./src", // Dossier source de ton code TypeScript
-    "strict": true, // Activer le mode strict pour des vérifications supplémentaires
-    "resolveJsonModule": true, // Permet l'importation de fichiers JSON
-    "forceConsistentCasingInFileNames": true // S'assurer que les noms de fichiers sont cohérents
+    "moduleResolution": "node",
+    "target": "es2022",
+    "module": "commonjs",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/**/*"], // Inclure tous les fichiers dans le dossier src
-  "exclude": ["node_modules", "dist"] // Exclure node_modules et dist du processus de compilation
+  "include": ["src/**/*"]
 }

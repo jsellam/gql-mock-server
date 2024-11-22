@@ -1,14 +1,14 @@
 // import ApolloServer from "@apollo/server";
 
-import fs from "fs/promises";
+import * as fs from "fs/promises";
 import yaml from "yaml";
 import { buildHTTPExecutor } from "@graphql-tools/executor-http";
-import { stitchSchemas } from "@graphql-tools/stitch";
+import { stitchSchemas, ValidationLevel } from "@graphql-tools/stitch";
 import { createSchema } from "graphql-yoga";
 import { ApolloServer } from "@apollo/server";
 import { startStandaloneServer } from "@apollo/server/standalone";
 import fetch from "node-fetch";
-
+import gen from "./gen/index";
 import { schemaFromExecutor } from "@graphql-tools/wrap";
 
 type Field = {
@@ -72,9 +72,19 @@ function createQueriesType(queries: Query[]) {
   return typeDefs;
 }
 
+// function createQueryResolvers(queries: Query[]) {
+//   const resolvers = { Query: {} };
+//   queries.forEach((query) => {
+//     resolvers.Query[query.name] = (parent, args) => {
+//       return generateObject(query.type, args, parent);
+//     };
+//   });
+// }
+
 function createTypeDefs(config: Config): string {
   const objectTypes = createObjectType(config.types);
   const queryTypes = createQueriesType(config.queries);
+  // const queryResolvers = createQueryResolvers(config.queries);
 
   return `
     ${objectTypes}
@@ -86,6 +96,9 @@ function createTypeDefs(config: Config): string {
 }
 
 async function run() {
+  const uuid = gen("uuid()");
+  console.log("uuid generated", uuid);
+
   const content = await fs.readFile("./gql-mock.yml", "utf-8");
   const config = yaml.parse(content) as Config;
 
@@ -118,6 +131,9 @@ async function run() {
   });
 
   const schema = stitchSchemas({
+    typeMergingOptions: {
+      validationSettings: { validationLevel: ValidationLevel.Off },
+    },
     subschemas: [
       {
         schema: await schemaFromExecutor(remoteExec),

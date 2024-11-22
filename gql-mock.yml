@@ -6,24 +6,30 @@ types:
     fields:
       - name: id
         type: ID!
-        faker: random.uuid
+        gen: gen.uuid()
       - name: "hd"
         type: String!
-        faker: image.url
+        gen: image.img()
       - name: "sd"
         type: String!
-        faker: image.url
+        gen: gen.img()
   - name: Book
     description: "This is a book item"
     fields:
       - name: id
         type: ID!
-        faker: random.uuid
+        gen: gen.uuid()
         description: "Unique identifier for the book."
       - name: title
         type: String!
-        faker: lorem.sentence
+        gen: gen.sentence()
         description: "The title of the book"
+      - name: cover
+        type: Image!
+        gen: gen.relation('Image')
+      - name: photos
+        type: [Image!]
+        gen: gen.relations('Image',3,6)
 queries:
   - name: book
     type: Book
