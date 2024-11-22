@@ -7,12 +7,9 @@ import { stitchSchemas } from "@graphql-tools/stitch";
 import { createSchema } from "graphql-yoga";
 import { ApolloServer } from "@apollo/server";
 import { startStandaloneServer } from "@apollo/server/standalone";
+import fetch from "node-fetch";
 
-import {
-  RenameRootFields,
-  RenameTypes,
-  schemaFromExecutor,
-} from "@graphql-tools/wrap";
+import { schemaFromExecutor } from "@graphql-tools/wrap";
 
 type Field = {
   name: string;
@@ -96,9 +93,27 @@ async function run() {
 
   const remoteExec = buildHTTPExecutor({
     endpoint: "https://api.dev.ked.southpigalle.io/graphql",
-    disposable: true,
-    fetch: async (url: string, options?: RequestInit, context?: any) => {
-      return {};
+    fetch: async (input, init, context, info) => {
+      try {
+        const params = {
+          method: init?.method,
+          body: init?.body?.toString(),
+          headers: context?.req?.headers || init?.headers,
+        };
+
+        delete params.headers.host;
+
+        const response = await fetch(input, params);
+
+        if (response.status > 201) {
+          throw new Error("Something went wrong!");
+        }
+
+        return response as unknown as Response;
+      } catch (e) {
+        console.log(e);
+        throw e;
+      }
     },
   });
 
@@ -120,6 +135,10 @@ async function run() {
 
   const { url } = await startStandaloneServer(server, {
     listen: { port: 4000 },
+    context: async (context) => {
+      console.log("custom header context", context.req?.headers);
+      return context;
+    },
   });
 
   console.log(`🚀  Server ready at: ${url}`);
