@@ -1,4 +1,4 @@
-remote:
+remotes:
   - https://api.dev.ked.southpigalle.io/graphql
 types:
   - name: Image
@@ -18,18 +18,18 @@ types:
     fields:
       - name: id
         type: ID!
-        gen: gen.uuid()
+        gen: uuid()
         description: "Unique identifier for the book."
       - name: title
         type: String!
-        gen: gen.sentence()
+        gen: sentence()
         description: "The title of the book"
-      - name: cover
-        type: Image!
-        gen: gen.relation('Image')
-      - name: photos
-        type: [Image!]
-        gen: gen.relations('Image',3,6)
+      # - name: cover
+      #   type: Image!
+      #   gen: img()
+      # - name: photos
+      #   type: "[Image]!"
+      #   gen: refs('Image',3,6)
 queries:
   - name: book
     type: Book
@@ -38,7 +38,7 @@ queries:
       - name: id
         type: ID!
   - name: books
-    type: [Book!]
+    type: "[Book!]"
     description: "Get Book list"
     arguments:
       - name: skip

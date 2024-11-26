@@ -5,6 +5,9 @@ const api = {
   uuid: () => faker.string.uuid(),
   img: () => faker.image.urlLoremFlickr(),
   sentence: () => faker.lorem.sentence(),
+  refs: (typeName: string, min: number, max: number) => {
+    return [];
+  },
 };
 
 const isolate = new ivm.Isolate({ memoryLimit: 8 });

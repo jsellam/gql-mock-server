@@ -10,4 +10,6 @@ export default defineConfig((options) => ({
   outDir: "dist", // Spécifie le dossier de sortie
   bundle: true,
   minify: !options.watch,
+  external: ["graphql"],
+  noExternal: [],
 }));

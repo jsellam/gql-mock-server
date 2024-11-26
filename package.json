@@ -22,17 +22,22 @@
   "dependencies": {
     "@apollo/server": "^4.11.2",
     "@faker-js/faker": "^9.2.0",
+    "@graphql-tools/delegate": "^10.2.0",
     "@graphql-tools/executor-http": "^1.1.9",
+    "@graphql-tools/schema": "^10.0.9",
     "@graphql-tools/stitch": "^9.3.5",
     "@graphql-tools/wrap": "^10.0.17",
-    "graphql-yoga": "^5.10.3",
+    "@types/graphql": "^14.2.3",
     "isolated-vm": "^5.0.1",
     "node-fetch": "^3.3.2",
     "nodemon": "^3.1.7",
     "yaml": "^2.6.1"
   },
+  "resolutions": {
+    "graphql": "16.9.0",
+    "**/graphql": "16.9.0"
+  },
   "devDependencies": {
-    "@types/graphql": "^14.2.3",
     "@types/node": "^22.9.1",
     "@types/node-fetch": "^2.6.12",
     "concurrently": "^9.1.0",

@@ -2,145 +2,83 @@
 
 import * as fs from "fs/promises";
 import yaml from "yaml";
-import { buildHTTPExecutor } from "@graphql-tools/executor-http";
+
 import { stitchSchemas, ValidationLevel } from "@graphql-tools/stitch";
-import { createSchema } from "graphql-yoga";
+// import { createSchema } from "graphql-yoga";
 import { ApolloServer } from "@apollo/server";
 import { startStandaloneServer } from "@apollo/server/standalone";
-import fetch from "node-fetch";
 import gen from "./gen/index";
-import { schemaFromExecutor } from "@graphql-tools/wrap";
 
-type Field = {
-  name: string;
-  type: string;
-  faker: string;
-  description?: string;
+import { makeExecutableSchema } from "@graphql-tools/schema";
+
+import { GraphQLResolveInfo } from "graphql";
+import { getTypeDetails } from "./schemaParser/getTypeDetails";
+import { Config, Query, Type } from "./types/config";
+import { createTypeDefs } from "./schemaParser/createTypeDefs";
+import { createRemoteSubSchema } from "./server/createRemoteSubSchema";
+
+type ResolverFunc = (
+  parent: any,
+  args: any,
+  context: any,
+  info: GraphQLResolveInfo
+) => any | any[];
+
+type Resolvers = {
+  Query: Record<string, ResolverFunc>;
 };
 
-type Type = {
-  name: string;
-  description?: string;
-  fields: Field[];
-};
-
-type Config = {
-  remote: string[];
-  types: Type[];
-  queries: Query[];
-};
-
-type Typedef = string;
-
-type Argument = {
-  name: string;
-  type: string;
-  description?: string;
-};
-
-type Query = {
-  name: string;
-  type: string;
-  description: string;
-  arguments: Argument[];
-};
-
-function createObjectType(types: Type[]): Typedef[] {
-  const typeDefs: Typedef[] = [];
-
-  types.forEach((type) => {
-    const fields = type.fields
-      .map((field: Field) => field.name + ":" + field.type)
-      .join("\n");
-    typeDefs.push(`type ${type.name} {\n${fields}\n}`);
-  });
-
-  return typeDefs;
+function createResolver(name: string, types: Type[]) {
+  return (parent: any, args: any, context: any, info: GraphQLResolveInfo) => {
+    const returnDetails = getTypeDetails(info.returnType);
+    // console.log("return details", returnDetails);
+    const type = types.find((type) => type.name === returnDetails.typeName);
+    // console.log("return type", info.returnType);
+    if (returnDetails.isList) {
+      // console.log("this is a list");
+      return Array.from({ length: 10 }, () => {
+        const result: Record<string, any> = {};
+        type?.fields.forEach((field) => {
+          result[field.name] = gen(field.gen);
+        });
+        return result;
+      });
+    }
+    const result: Record<string, any> = {};
+    type?.fields.forEach((field) => {
+      result[field.name] = gen(field.gen);
+    });
+    return result;
+  };
 }
 
-function createQueriesType(queries: Query[]) {
-  const typeDefs: Typedef[] = [];
+function createQueryResolvers(queries: Query[], types: Type[]) {
+  const resolvers: Resolvers = { Query: {} };
   queries.forEach((query) => {
-    const args = (query.arguments || [])
-      .map((arg) => `${arg.name}: ${arg.type}`)
-      .join(", ");
-    typeDefs.push(`\n${query.name}(${args}): ${query.type}\n`);
+    resolvers.Query[query.name] = createResolver(query.name, types);
   });
-
-  console.log(typeDefs);
-
-  return typeDefs;
-}
-
-// function createQueryResolvers(queries: Query[]) {
-//   const resolvers = { Query: {} };
-//   queries.forEach((query) => {
-//     resolvers.Query[query.name] = (parent, args) => {
-//       return generateObject(query.type, args, parent);
-//     };
-//   });
-// }
-
-function createTypeDefs(config: Config): string {
-  const objectTypes = createObjectType(config.types);
-  const queryTypes = createQueriesType(config.queries);
-  // const queryResolvers = createQueryResolvers(config.queries);
-
-  return `
-    ${objectTypes}
-
-    type Query {
-            ${queryTypes}
-        }
-  `;
+  return resolvers;
 }
 
 async function run() {
-  const uuid = gen("uuid()");
-  console.log("uuid generated", uuid);
-
   const content = await fs.readFile("./gql-mock.yml", "utf-8");
   const config = yaml.parse(content) as Config;
 
   const typeDefs = createTypeDefs(config);
+  const queryResolvers = createQueryResolvers(config.queries, config.types);
 
-  const remoteExec = buildHTTPExecutor({
-    endpoint: "https://api.dev.ked.southpigalle.io/graphql",
-    fetch: async (input, init, context, info) => {
-      try {
-        const params = {
-          method: init?.method,
-          body: init?.body?.toString(),
-          headers: context?.req?.headers || init?.headers,
-        };
-
-        delete params.headers.host;
-
-        const response = await fetch(input, params);
-
-        if (response.status > 201) {
-          throw new Error("Something went wrong!");
-        }
-
-        return response as unknown as Response;
-      } catch (e) {
-        console.log(e);
-        throw e;
-      }
-    },
-  });
+  const remotes = config.remotes.map(
+    async (uri) => await createRemoteSubSchema(uri)
+  );
 
   const schema = stitchSchemas({
     typeMergingOptions: {
       validationSettings: { validationLevel: ValidationLevel.Off },
     },
     subschemas: [
+      ...(await Promise.all(remotes)),
       {
-        schema: await schemaFromExecutor(remoteExec),
-        executor: remoteExec,
-      },
-      {
-        schema: createSchema({ typeDefs, resolvers: { Query: {} } }),
+        schema: makeExecutableSchema({ typeDefs, resolvers: queryResolvers }),
       },
     ],
   });
@@ -152,7 +90,6 @@ async function run() {
   const { url } = await startStandaloneServer(server, {
     listen: { port: 4000 },
     context: async (context) => {
-      console.log("custom header context", context.req?.headers);
       return context;
     },
   });
